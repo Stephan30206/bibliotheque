@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from "./context/AuthContext.jsx";
 import Navbar from './components/Navbar';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Books from './pages/Books';
@@ -22,6 +23,7 @@ function App() {
                 <ToastContainer position="top-right" autoClose={3000} />
                 <div className="main-content">
                     <Routes>
+                        <Route path="/" element={<Home />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
                         <Route path="/books" element={<PrivateRoute><Books /></PrivateRoute>} />
@@ -31,7 +33,7 @@ function App() {
                         <Route path="/stats" element={<PrivateRoute><Stats /></PrivateRoute>} />
                         <Route path="/users" element={<PrivateRoute role="ADMIN"><Users /></PrivateRoute>} />
                         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-                        <Route path="*" element={<Navigate to="/books" />} />
+                        <Route path="*" element={<Navigate to="/" />} />
                     </Routes>
                 </div>
             </BrowserRouter>
