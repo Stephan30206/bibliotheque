@@ -1,25 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/axios';
-import { TrendingUp, Users, BookOpen, Activity, CheckCircle, XCircle, Award, Library } from 'lucide-react';
+import { TrendingUp, Users, BookOpen, Activity, CheckCircle, XCircle, Award, Library, Clock, User } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const Stats = () => {
     const [topBooks, setTopBooks] = useState([]);
     const [topUsers, setTopUsers] = useState([]);
+    const [recentBorrowings, setRecentBorrowings] = useState([]);
     const [generalStats, setGeneralStats] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const [booksRes, usersRes, generalRes] = await Promise.all([
+                const [booksRes, usersRes, generalRes, recentRes] = await Promise.all([
                     api.get('/stats/top-books'),
                     api.get('/stats/top-users'),
-                    api.get('/stats/general')
+                    api.get('/stats/general'),
+                    api.get('/borrowings')
                 ]);
                 setTopBooks(booksRes.data);
                 setTopUsers(usersRes.data);
                 setGeneralStats(generalRes.data);
+                // Sort by date desc and take 5
+                const sortedRecent = [...recentRes.data]
+                    .sort((a, b) => new Date(b.borrowedAt) - new Date(a.borrowedAt))
+                    .slice(0, 5);
+                setRecentBorrowings(sortedRecent);
             } catch (err) {
                 toast.error('Erreur lors du chargement des statistiques.');
             } finally {
@@ -40,7 +47,7 @@ const Stats = () => {
                     <TrendingUp size={32} color="var(--accent)" />
                     Statistiques & Analyse
                 </h1>
-                <p className="text-muted">Vue d'ensemble et rapports détaillés de l'activité.</p>
+                <p className="text-muted">Vue d'ensemble et rapports détaillés de l'activité de la bibliothèque.</p>
             </header>
 
             {generalStats && (
@@ -89,7 +96,7 @@ const Stats = () => {
                                     <div className="item-rank">{index + 1}</div>
                                     <div className="item-details">
                                         <span className="item-name">{book.title}</span>
-                                        <span className="item-meta">{book.count} emprunts</span>
+                                        <span className="item-meta">{book.author} • {book.count} emprunts</span>
                                     </div>
                                 </div>
                             ))
@@ -111,7 +118,7 @@ const Stats = () => {
                                     <div className="item-rank">{index + 1}</div>
                                     <div className="item-details">
                                         <span className="item-name">{user.username}</span>
-                                        <span className="item-meta">{user.count} emprunts</span>
+                                        <span className="item-meta">{user.count} livres empruntés</span>
                                     </div>
                                     {index === 0 && <Award size={18} className="gold-medal" />}
                                 </div>
@@ -119,6 +126,55 @@ const Stats = () => {
                         ) : (
                             <p className="empty-msg">Aucune donnée disponible</p>
                         )}
+                    </div>
+                </section>
+
+                <section className="data-card card full-width">
+                    <div className="card-header">
+                        <Clock size={20} className="header-icon" />
+                        <h2 className="card-title">Emprunts Récents</h2>
+                    </div>
+                    <div className="table-wrapper">
+                        <table className="recent-table">
+                            <thead>
+                                <tr>
+                                    <th>Livre</th>
+                                    <th>Utilisateur</th>
+                                    <th>Date d'emprunt</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recentBorrowings.length > 0 ? (
+                                    recentBorrowings.map((b) => (
+                                        <tr key={b.id}>
+                                            <td>
+                                                <div className="book-cell">
+                                                    <BookOpen size={16} />
+                                                    <span>{b.book.title}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="user-cell">
+                                                    <User size={16} />
+                                                    <span>{b.user.username}</span>
+                                                </div>
+                                            </td>
+                                            <td>{new Date(b.borrowedAt).toLocaleDateString()}</td>
+                                            <td>
+                                                <span className={`status-badge ${b.returnedAt ? 'returned' : 'active'}`}>
+                                                    {b.returnedAt ? 'Rendu' : 'En cours'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="4" className="empty-row">Aucun emprunt récent</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </section>
             </div>
@@ -183,6 +239,9 @@ const Stats = () => {
                     border-radius: 24px;
                     border: 1px solid var(--border);
                 }
+                .data-card.full-width {
+                    grid-column: 1 / -1;
+                }
                 .card-header {
                     display: flex;
                     align-items: center;
@@ -239,7 +298,40 @@ const Stats = () => {
                     color: var(--text-muted);
                 }
                 .gold-medal { color: #fbbf24; }
-                .empty-msg {
+
+                .recent-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    text-align: left;
+                }
+                .recent-table th {
+                    padding: 1rem;
+                    font-size: 0.875rem;
+                    color: var(--text-muted);
+                    font-weight: 600;
+                    border-bottom: 1px solid var(--border);
+                }
+                .recent-table td {
+                    padding: 1rem;
+                    border-bottom: 1px solid var(--border);
+                    font-size: 0.875rem;
+                }
+                .book-cell, .user-cell {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-weight: 500;
+                }
+                .status-badge {
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 20px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                }
+                .status-badge.active { background: #fff7ed; color: #f97316; }
+                .status-badge.returned { background: #f0fdf4; color: #22c55e; }
+
+                .empty-msg, .empty-row {
                     color: var(--text-muted);
                     text-align: center;
                     padding: 2rem;

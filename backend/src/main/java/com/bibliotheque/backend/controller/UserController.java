@@ -14,9 +14,15 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class UserController {
 
     private final UserRepository userRepository;
+
+    @GetMapping("/ping")
+    public String ping() {
+        return "pong";
+    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
@@ -26,20 +32,21 @@ public class UserController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public User getById(@PathVariable Long id) {
-        return userRepository.findById(id)
+    public ResponseEntity<User> getById(@PathVariable Long id) {
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur non trouvé"));
+        return ResponseEntity.ok(user);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public ResponseEntity<User> update(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<User> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur non trouvé avec l'id : " + id));
 
-        if (body.containsKey("username")) user.setUsername(body.get("username"));
-        if (body.containsKey("email")) user.setEmail(body.get("email"));
-        if (body.containsKey("role")) user.setRole(body.get("role"));
+        if (body.get("username") != null) user.setUsername(body.get("username").toString());
+        if (body.get("email") != null) user.setEmail(body.get("email").toString());
+        if (body.get("role") != null) user.setRole(body.get("role").toString());
 
         User updatedUser = userRepository.save(user);
         return ResponseEntity.ok(updatedUser);
